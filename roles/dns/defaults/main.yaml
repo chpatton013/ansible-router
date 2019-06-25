@@ -1,0 +1,82 @@
+---
+forwarders:
+- 1.0.0.1
+- 1.1.1.1
+address: 10.255.0.1
+domain_lists_zones:
+- zone: sinkhole-blacklist
+  lists:
+  - name: steven_black
+    url: https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts
+  - name: malware_domains
+    url: https://mirror1.malwaredomains.com/files/justdomains
+  - name: cameleon
+    url: http://sysctl.org/cameleon/hosts
+  - name: zeus_tracker
+    url: https://zeustracker.abuse.ch/blocklist.php?download=domainblocklist
+  - name: disconnect_me_tracking
+    url: https://s3.amazonaws.com/lists.disconnect.me/simple_tracking.txt
+  - name: disconnect_me_ads
+    url: https://s3.amazonaws.com/lists.disconnect.me/simple_ad.txt
+  - name: hosts_file
+    url: https://hosts-file.net/ad_servers.txt
+  ignore_file: /etc/bind/lists/list.ignore
+domain_lists_file: /etc/bind/lists.yaml
+domain_lists_dir: /etc/bind/lists
+zones_dir: /etc/bind/zones
+zones:
+- name: home
+  domain: home.chrispatton.dev
+  ttl: 60
+  soa:
+    owner: "@"
+    domain: home.chrispatton.dev
+    name_server: dns
+    email_address: hostmaster
+    refresh: 7200
+    retry: 120
+    expire: 3600
+    negative_cache_ttl: 120
+  reverse_zones:
+  - name: routing
+    ip_address: 10.255.0
+    services:
+    - ip_address: "1"
+      subdomains:
+      - dhcp
+      - dns
+      - gateway
+      - ntp
+      - router
+      - vpn
+      - web
+    - ip_address: "255"
+      subdomains:
+      - broadcast
+  - name: static
+    ip_address: 10.255.1
+    static_hosts:
+    - domain_name: static_routee
+      ip_address: "1"
+  root: 10.255.0.1
+  wildcard: 10.255.0.1
+- name: sinkhole-blacklist
+  allow_query:
+  - none
+  domain: "*"
+  ttl: 60
+  soa:
+    owner: "@"
+    domain: home.chrispatton.dev
+    name_server: dns
+    email_address: hostmaster
+    refresh: 7200
+    retry: 120
+    expire: 3600
+    negative_cache_ttl: 120
+  includes:
+  - "{{zones_dir}}/db.sinkhole-blacklist.fragment"
+response_policies:
+- zone: sinkhole-whitelist
+  policy: PASSTHRU
+- zone: sinkhole-blacklist

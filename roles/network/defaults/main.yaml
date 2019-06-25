@@ -1,0 +1,44 @@
+---
+interfaces:
+- name: lo
+  comment: |
+    Loopback
+    Virtual interface used to redirect any traffic bound for the localhost.
+  event: auto
+  method: loopback
+- name: enp0s3
+  comment: |
+    WAN
+    Physical interface used to connect to the external network.
+    Network configuration is provided over DHCP.
+  event: allow-hotplug
+  method: dhcp
+- name: enp0s8
+  comment: |
+    LAN 1
+    Physical interface used to connect to the internal network.
+    No network configuration is provided for this interface.
+  event: allow-hotplug
+  method: manual
+- name: enp0s9
+  comment: |
+    LAN 2
+    Physical interface used to connect to the internal network.
+    No network configuration is provided for this interface.
+  event: allow-hotplug
+  method: manual
+- name: br0
+  comment: |
+    LAN bridge
+    Virtual interface used to join interfaces connected to the internal network.
+    Network configuration is specified statically.
+  event: auto
+  method: static
+  configuration:
+  - address 10.255.0.1
+  - netmask 255.255.252.0
+  - broadcast 10.255.0.255
+  - bridge_ports enp0s8 enp0s9
+  - bridge_stp "on"
+  - dns-search home.chrispatton.dev
+  - dns-nameservers 10.255.0.1

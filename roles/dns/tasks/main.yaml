@@ -1,0 +1,128 @@
+---
+- name: Install DNS packages
+  apt:
+    name: "{{packages}}"
+  vars:
+    packages:
+    - bind9
+    - bind9utils
+    - bind9-doc
+  become: yes
+- name: Copy bind9 defaults file
+  copy:
+    src: bind9
+    dest: /etc/default/bind9
+    owner: root
+    group: root
+    mode: 0644
+  become: yes
+- name: Render named options config template
+  template:
+    src: named.conf.options
+    dest: /etc/bind/named.conf.options
+    owner: root
+    group: root
+    mode: 0644
+  become: yes
+- name: Render named local config template
+  template:
+    src: named.conf.local
+    dest: /etc/bind/named.conf.local
+    owner: root
+    group: root
+    mode: 0644
+  become: yes
+- name: Create zone file directory
+  file:
+    path: "{{zones_dir}}"
+    state: directory
+    owner: root
+    group: root
+    mode: 0755
+  become: true
+- name: Render named forward zone templates
+  template:
+    src: db.forward_zone
+    dest: "{{zones_dir}}/db.{{forward_zone.name}}"
+    owner: root
+    group: root
+    mode: 0644
+  vars:
+    forward_zone: "{{item}}"
+  loop: "{{zones}}"
+  become: yes
+- name: Render named reverse zone templates
+  template:
+    src: db.reverse_zone
+    dest: "{{zones_dir}}/db.{{reverse_zone.name}}"
+    owner: root
+    group: root
+    mode: 0644
+  vars:
+    forward_zone: "{{item.0}}"
+    reverse_zone: "{{item.1}}"
+  loop: "{{zones | subelements('reverse_zones', {'skip_missing': True})}}"
+  become: yes
+- name: Create domain lists directory
+  file:
+    path: "{{domain_lists_dir}}"
+    state: directory
+    owner: root
+    group: root
+    mode: 0755
+  become: true
+- name: Create domain lists file
+  copy:
+    content: "{{ domain_lists_zones | to_nice_yaml(indent=2, width=80) }}"
+    dest: "{{domain_lists_file}}"
+    owner: root
+    group: root
+    mode: 0644
+  become: yes
+- name: Render sync domain lists templates
+  template:
+    src: user.dns-0-sync-domain-lists
+    dest: /etc/cron.daily/user.dns-0-sync-domain-lists
+    owner: root
+    group: root
+    mode: 0755
+  become: yes
+- name: Render domain lists to zones templates
+  template:
+    src: user.dns-1-domain-lists-to-zones
+    dest: /etc/cron.daily/user.dns-1-domain-lists-to-zones
+    owner: root
+    group: root
+    mode: 0755
+  become: yes
+- name: Sync domain list files
+  command: /etc/cron.daily/user.dns-0-sync-domain-lists --allow-expired
+  become: yes
+- name: Generate domain list zones
+  command: /etc/cron.daily/user.dns-1-domain-lists-to-zones --no-reload-bind
+  become: yes
+- name: Check named config
+  command: named-checkconf /etc/bind/named.conf
+  become: yes
+- name: Check named forward zones
+  command: named-checkzone {{item.domain}} {{zones_dir}}/db.{{item.name}}
+  loop: "{{zones}}"
+  become: yes
+- name: Check named reverse zones
+  command: >
+    named-checkzone
+      {{item.1.ip_address.split(".") | reverse | join(".")}}.in-addr.arpa
+      {{zones_dir}}/db.{{item.1.name}}
+  loop: "{{zones | subelements('reverse_zones')}}"
+  become: yes
+- name: Enable BIND9 service
+  systemd:
+    name: bind9.service
+    state: started
+    enabled: yes
+  become: yes
+- name: Reload BIND9 service
+  systemd:
+    name: bind9.service
+    state: reloaded
+  become: yes

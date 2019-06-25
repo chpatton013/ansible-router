@@ -1,0 +1,11 @@
+---
+- hosts: localhost
+  roles:
+  - dhcp
+  - dns
+  # - gateway
+  - network
+  - ntp
+  - system-administration
+  # - vpn
+  # - webserver

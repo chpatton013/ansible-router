@@ -1,0 +1,22 @@
+# /etc/network/interfaces
+
+# This file describes the network interfaces available on your system
+# and how to activate them. For more information, see interfaces(5).
+
+source /etc/network/interfaces.d/*
+
+{% for interface in interfaces %}
+{% if interface.comment is not undefined %}
+{% for line in interface.comment.splitlines() %}
+# {{line}}
+{% endfor %}
+{% endif %}
+{{interface.event}} {{interface.name}}
+iface {{interface.name}} inet {{interface.method}}
+{% if interface.configuration is not undefined %}
+{% for line in interface.configuration %}
+  {{line}}
+{% endfor %}
+{% endif %}
+
+{% endfor %}

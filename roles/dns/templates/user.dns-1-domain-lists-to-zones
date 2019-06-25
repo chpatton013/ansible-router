@@ -1,0 +1,174 @@
+#!/usr/bin/env python
+
+from __future__ import print_function
+
+import argparse
+import ipaddress
+import os
+import re
+import sys
+import yaml
+
+
+DEFAULT_DOMAIN_LISTS_FILE = "{{domain_lists_file}}"
+DEFAULT_DOMAIN_LISTS_DIR = "{{domain_lists_dir}}"
+DEFAULT_ZONES_DIR = "{{zones_dir}}"
+
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--lists-file", default=DEFAULT_DOMAIN_LISTS_FILE)
+    parser.add_argument("--lists-dir", default=DEFAULT_DOMAIN_LISTS_DIR)
+    parser.add_argument("--zones-dir", default=DEFAULT_ZONES_DIR)
+
+    reload_bind_group = parser.add_mutually_exclusive_group()
+    reload_bind_group.add_argument(
+        "--reload-bind",
+        action="store_true",
+        dest="reload_bind",
+    )
+    reload_bind_group.add_argument(
+        "--no-reload-bind",
+        action="store_false",
+        dest="reload_bind",
+    )
+
+    return parser.parse_args()
+
+
+def read_domain_lists_file(domain_lists_file_path):
+    return yaml.load(open(domain_lists_file_path, "r"), Loader=yaml.SafeLoader)
+
+
+def read_ignore_file(ignore_file_path):
+    try:
+        return open(ignore_file_path, "r").read()
+    except IOError:
+        return ""
+
+
+def zone_file_path(zones_dir, list_name):
+    return os.path.join(zones_dir, "zone.{}".format(list_name))
+
+
+def domain_list_file_path(lists_dir, list_name):
+    return os.path.join(lists_dir, "list.{}".format(list_name))
+
+
+def zone_file_outdated(zone_file_path, list_file_path):
+    try:
+        return (
+            os.path.getmtime(zone_file_path) > os.path.getmtime(list_file_path)
+        )
+    except OSError:
+        return False
+
+
+def domain_to_zone(domain, zone_file):
+    return "zone \"{}\" {{'{{'}} type master; file \"{}\"; {{'}}'}};\n".format(
+        domain,
+        zone_file,
+    )
+
+
+def is_domain_name(candidate):
+    try:
+        # IP addresses are not valid domain names.
+        ipaddress.ip_address(unicode(candidate))
+        return False
+    except ValueError:
+        pass
+
+    # Valid domain names have at least two domain-parts separated by a `.`.
+    domain_part, _, top_level_domain = candidate.rpartition(".")
+    return domain_part and top_level_domain
+
+
+def strip_comments(content):
+    return "\n".join(
+        [re.sub(r"#.*$", r"", line) for line in content.splitlines()],
+    )
+
+
+def generate_domains(content, ignore=set()):
+    for match in re.finditer(r"(\S+)", strip_comments(content)):
+        for group in match.groups():
+            if is_domain_name(group) and group not in ignore:
+                yield group.lower()
+
+
+def domain_list_file_to_zone_file(domains, zone_file):
+    with open(zone_file, "w") as f:
+        for domain in domains:
+            f.write(domain_to_zone(domain, zone_file))
+
+
+def domain_lists_to_zone_files(zone, zones_dir, lists_dir):
+    zone_file_path_ = zone_file_path(zones_dir, zone["zone"])
+
+    ignore_domains = {
+        domain
+        for domain in generate_domains(
+            strip_comments(read_ignore_file(zone["ignore_file"])),
+        )
+    }
+
+    updated = []
+    domains = set()
+    for domain_list in zone["lists"]:
+        domain_list_file_path_ = domain_list_file_path(
+            lists_dir,
+            domain_list["name"],
+        )
+        if zone_file_outdated(zone_file_path_, domain_list_file_path_):
+            updated.append(domain_list)
+
+        domain_file_content = open(domain_list_file_path_, "r").read()
+        for domain in generate_domains(domain_file_content, ignore_domains):
+            domains.add(domain)
+
+    domain_list_file_to_zone_file(sorted(domains), zone_file_path_)
+
+    return updated
+
+
+def domain_lists_to_zone_file(zones, *args, **kwargs):
+    updated = []
+    for zone in zones:
+        updated.extend(domain_lists_to_zone_files(
+            zone,
+            *args,
+            **kwargs
+        ))
+    return updated
+
+
+def reload_bind():
+    service_name = "bind9.service"
+    try:
+        subprocess.check_output(["systemctl", "status", service_name])
+    except subprocess.CalledProcessError:
+        print("BIND9 service is not running, so it will not be reloaded.")
+    else:
+        print("Reloading BIND9 service")
+        subprocess.check_output(["systemctl", "reload", service_name])
+
+
+def main():
+    args = parse_args()
+
+    domain_lists_zones = read_domain_lists_file(args.lists_file)
+    updated = domain_lists_to_zone_file(
+        domain_lists_zones,
+        args.zones_dir,
+        args.lists_dir,
+    )
+
+    if len(updated) and (args.reload_bind is True or args.reload_bind is None):
+        reload_bind()
+
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

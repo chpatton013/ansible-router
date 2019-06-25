@@ -1,0 +1,139 @@
+#!/usr/bin/env python
+
+from __future__ import print_function
+
+import argparse
+import datetime
+import os
+import requests
+import sys
+import yaml
+
+
+DEFAULT_DOMAIN_LISTS_FILE = "{{domain_lists_file}}"
+DEFAULT_DOMAIN_LISTS_DIR = "{{domain_lists_dir}}"
+SECONDS_PER_DAY = 86400
+SECONDS_PER_HOUR = 3600
+FILE_CHUNK_SIZE = 1024
+
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--lists-file", default=DEFAULT_DOMAIN_LISTS_FILE)
+    parser.add_argument("--lists-dir", default=DEFAULT_DOMAIN_LISTS_DIR)
+
+    allow_expired_group = parser.add_mutually_exclusive_group()
+    allow_expired_group.add_argument(
+        "--allow-expired",
+        action="store_true",
+        dest="allow_expired",
+    )
+    allow_expired_group.add_argument(
+        "--no-allow-expired",
+        action="store_false",
+        dest="allow_expired",
+    )
+
+    args = parser.parse_args()
+    if args.allow_expired is None:
+        args.allow_expired = False
+    return args
+
+
+def read_domain_lists_file(lists_file_path):
+    return yaml.load(open(lists_file_path, "r"), Loader=yaml.SafeLoader)
+
+
+def domain_list_file_path(lists_dir, list_name):
+    return os.path.join(lists_dir, "list.{}".format(list_name))
+
+
+def domain_list_file_expired(file_path, now):
+    expire_time = (now - SECONDS_PER_DAY - SECONDS_PER_HOUR)
+    return os.path.getmtime(file_path) < expire_time
+
+
+def download_domain_list_file(url, file_path):
+    try:
+        print("Fetching domain list from URL {}...".format(url))
+        response = requests.get(url, stream=True)
+    except requests.exceptions.RequestException as exception:
+        print(
+            "Failed to request from URL: '{}'\n{}".format(file_path, exception),
+            file=sys.stderr,
+        )
+        return False
+
+    if response.status_code != requests.codes.ok:
+        print(
+            "Unsuccessful status code returned from URL: '{}'\n{}".format(
+                file_path,
+                response,
+            ),
+            file=sys.stderr,
+        )
+        return False
+
+    print("Writing domain list to file {}...".format(file_path))
+    with open(file_path, "w") as f:
+        for chunk in response.iter_content(chunk_size=FILE_CHUNK_SIZE):
+            if chunk:
+                f.write(chunk)
+    return True
+
+
+def seconds_since_epoch():
+    now = datetime.datetime.now()
+    epoch = datetime.datetime(1970, 1, 1)
+    return (now - epoch).total_seconds()
+
+
+def download_domain_lists(domain_lists_zones, lists_dir, allow_expired):
+    now = seconds_since_epoch()
+    failures = []
+    for zone in domain_lists_zones:
+        for domain_list in zone["lists"]:
+            file_path = domain_list_file_path(lists_dir, domain_list["name"])
+            if not allow_expired or domain_list_file_expired(file_path, now):
+                print("Downloading domain list {} from URL {}".format(
+                    domain_list["name"],
+                    domain_list["url"],
+                ))
+                if not download_domain_list_file(domain_list["url"], file_path):
+                    failures.append(domain_list)
+            else:
+                print("Domain list {} has not expired. Skipping.".format(
+                    domain_list["name"],
+                ))
+    return failures
+
+
+def main():
+    args = parse_args()
+
+    domain_lists_zones = read_domain_lists_file(args.lists_file)
+    failures = download_domain_lists(
+        domain_lists_zones,
+        args.lists_dir,
+        args.allow_expired,
+    )
+
+    if len(failures):
+        print(
+            "Failed to download {} of {} lists".format(
+                len(failures),
+                len(domain_lists),
+            ),
+            file=sys.stderr,
+        )
+        for domain_list in failures:
+            print(
+                "  {}: {}".format(domain_list["name"], domain_list["url"]),
+                file=sys.stderr,
+            )
+
+    return len(failures)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

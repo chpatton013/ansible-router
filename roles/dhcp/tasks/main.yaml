@@ -1,0 +1,35 @@
+---
+- name: Install DHCP packages
+  apt:
+    name: isc-dhcp-server
+  become: yes
+- name: Render dhcpd config template
+  template:
+    src: dhcpd.conf
+    dest: /etc/dhcp/dhcpd.conf
+    owner: root
+    group: root
+    mode: 644
+  register: dhcpd_config
+  become: yes
+- name: Render dhcp defaults template
+  template:
+    src: isc-dhcp-server
+    dest: /etc/default/isc-dhcp-server
+    owner: root
+    group: root
+    mode: 644
+  register: dhcp_defaults
+  become: yes
+- name: Reload DHCP service
+  systemd:
+    name: isc-dhcp-server.service
+    state: reloaded
+  when: dhcpd_config.changed or dhcp_defaults.changed
+  become: yes
+- name: Enable DHCP service
+  systemd:
+    name: isc-dhcp-server.service
+    state: started
+    enabled: yes
+  become: yes

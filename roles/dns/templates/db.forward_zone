@@ -1,0 +1,54 @@
+;
+; BIND data file for forward zone {{forward_zone.name}}
+;
+
+$TTL {{forward_zone.ttl}}
+{{forward_zone.soa.owner}} IN SOA {{forward_zone.soa.name_server}}.{{forward_zone.soa.domain}}. {{forward_zone.soa.email_address}}.{{forward_zone.soa.domain}}. (
+  {{ansible_date_time.epoch}}             ; Serial
+  {{forward_zone.soa.refresh}}            ; Refresh
+  {{forward_zone.soa.retry}}              ; Retry
+  {{forward_zone.soa.expire}}             ; Expire
+  {{forward_zone.soa.negative_cache_ttl}} ; Negative Cache TTL
+)
+
+; Name server: NS Record
+  IN NS {{forward_zone.soa.name_server}}.{{forward_zone.soa.domain}}.
+{% if forward_zone.reverse_zones is not undefined %}
+
+{% for reverse_zone in forward_zone.reverse_zones %}
+; Reverse zone: {{reverse_zone.name}}
+{% if reverse_zone.services is not undefined %}
+
+; Router services: A Records
+{% for service in reverse_zone.services %}
+{% for subdomain in service.subdomains %}
+{{subdomain}} IN A {{reverse_zone.ip_address}}.{{service.ip_address}}
+{% endfor %}
+{% endfor %}
+{% endif %}
+{% if reverse_zone.static_hosts is not undefined %}
+
+; Static hosts: A Records
+{% for host in reverse_zone.static_hosts %}
+{{host.domain_name}} IN A {{reverse_zone.ip_address}}.{{host.ip_address}}
+{% endfor %}
+{% endif %}
+{% endfor %}
+{% endif %}
+{% if forward_zone.root is not undefined %}
+
+; Root: A Record
+@ IN A {{forward_zone.root}}
+{% endif %}
+{% if forward_zone.wildcard is not undefined %}
+
+; Wildcard: A Record
+*. IN A {{forward_zone.wildcard}}
+{% endif %}
+{% if forward_zone.includes is not undefined %}
+
+; Includes
+{% for include in forward_zone.includes %}
+$INCLUDE include
+{% endfor %}
+{% endif %}

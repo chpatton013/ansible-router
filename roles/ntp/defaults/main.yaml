@@ -1,0 +1,3 @@
+---
+leap_seconds_url: https://www.ietf.org/timezones/data/leap-seconds.list
+leap_seconds_file: /var/lib/ntp/leap-seconds.list

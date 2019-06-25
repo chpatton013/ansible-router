@@ -1,0 +1,50 @@
+---
+- name: Install NTP packages
+  apt:
+    name: ntp
+  become: yes
+- name: Render NTP config template
+  template:
+    src: ntp.conf
+    dest: /etc/ntp.conf
+    owner: ntp
+    group: ntp
+    mode: 0644
+  register: ntp_config
+  become: yes
+- name: Render NTP cron task template
+  template:
+    src: user.ntp-leap-seconds-list
+    dest: /etc/cron.daily/user.ntp-leap-seconds-list
+    owner: root
+    group: root
+    mode: 0755
+  become: yes
+- name: Stat IETF leap seconds file
+  stat:
+    path: "{{leap_seconds_file}}"
+  register: ntp_leap_stat
+- name: Calculate leap seconds file expiration
+  command: date --date="2 days ago" "+%s"
+  register: ntp_leap_expiration
+- name: Download IETF leap seconds file
+  get_url:
+    url: "{{leap_seconds_url}}"
+    dest: "{{leap_seconds_file}}"
+    owner: ntp
+    group: ntp
+    mode: 0644
+  when: ntp_leap_stat.stat.mtime < ntp_leap_expiration.stdout|float
+  become: yes
+- name: Restart NTP service
+  systemd:
+    name: ntp.service
+    state: restarted
+  when: ntp_config.changed
+  become: yes
+- name: Enable NTP service
+  systemd:
+    name: ntp.service
+    state: started
+    enabled: yes
+  become: yes

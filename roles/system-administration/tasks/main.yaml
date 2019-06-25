@@ -1,0 +1,54 @@
+---
+- name: Install System Administration packages
+  apt:
+    name: "{{packages}}"
+  vars:
+    packages:
+    - apt-config-auto-update
+    - apt-listchanges
+    - etckeeper
+    - git-core
+    - mailutils
+    - unattended-upgrades
+  become: yes
+- name: Copy auto-upgrades config file
+  copy:
+    src: 20auto-upgrades
+    dest: /etc/apt/apt.conf.d/20auto-upgrades
+    owner: root
+    group: root
+    mode: 0644
+  register: sysadmin_auto_upgrades
+  become: yes
+- name: Copy unattended-upgrades config file
+  copy:
+    src: 50unattended-upgrades
+    dest: /etc/apt/apt.conf.d/50unattended-upgrades
+    owner: root
+    group: root
+    mode: 0644
+  register: sysadmin_unattended_upgrades
+  become: yes
+- name: Copy listchanges config file
+  copy:
+    src: listchanges.conf
+    dest: /etc/apt/listchanges.conf
+    owner: root
+    group: root
+    mode: 0644
+  register: sysadmin_listchanges
+  become: yes
+- name: Restart Unattended Upgrades service
+  systemd:
+    name: unattended-upgrades.service
+    state: restarted
+  when: (sysadmin_auto_upgrades.changed or
+         sysadmin_unattended_upgrades.changed or
+         sysadmin_listchanges.changed)
+  become: yes
+- name: Enable Unattended Upgrades service
+  systemd:
+    name: unattended-upgrades.service
+    state: started
+    enabled: yes
+  become: yes

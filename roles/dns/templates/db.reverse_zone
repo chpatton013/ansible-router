@@ -1,0 +1,31 @@
+;
+; BIND data file for reverse zone {{reverse_zone.name}}
+;
+
+$TTL {{forward_zone.ttl}}
+{{forward_zone.soa.owner}} IN SOA {{forward_zone.soa.name_server}}.{{forward_zone.soa.domain}}. {{forward_zone.soa.email_address}}.{{forward_zone.soa.domain}}. (
+  {{ansible_date_time.epoch}}             ; Serial
+  {{forward_zone.soa.refresh}}            ; Refresh
+  {{forward_zone.soa.retry}}              ; Retry
+  {{forward_zone.soa.expire}}             ; Expire
+  {{forward_zone.soa.negative_cache_ttl}} ; Negative Cache TTL
+)
+
+; Name server: NS Record
+  IN NS {{forward_zone.soa.name_server}}.{{forward_zone.soa.domain}}.
+{% if reverse_zone.services is not undefined %}
+
+; Router services: PTR Records
+{% for service in reverse_zone.services %}
+{% for subdomain in service.subdomains %}
+{{service.ip_address.split(".") | reverse | join(".")}} IN PTR {{subdomain}}.{{forward_zone.soa.domain}}.
+{% endfor %}
+{% endfor %}
+{% endif %}
+
+{% if reverse_zone.static_hosts is not undefined %}
+; Static hosts: PTR Records
+{% for host in reverse_zone.static_hosts %}
+{{host.ip_address.split(".") | reverse | join(".")}} IN PTR {{host.domain_name}}.{{forward_zone.soa.domain}}.
+{% endfor %}
+{% endif %}

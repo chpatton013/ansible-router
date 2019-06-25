@@ -1,0 +1,37 @@
+---
+- name: Install networking packages
+  apt:
+    name: "{{packages}}"
+  vars:
+    packages:
+    - bridge-utils
+    - resolvconf
+  become: yes
+- name: Render network interfaces template
+  template:
+    src: interfaces
+    dest: /etc/network/interfaces
+    owner: root
+    group: root
+    mode: 644
+  register: network_interfaces
+  become: yes
+- name: Restart Networking service
+  systemd:
+    name: networking.service
+    state: restarted
+  when: network_interfaces.changed
+  become: yes
+- name: Enable Networking service
+  systemd:
+    name: networking.service
+    state: started
+    enabled: yes
+  become: yes
+- name: Disable IPv6 for all interfaces
+  sysctl:
+    name: net.ipv6.conf.all.disable_ipv6
+    value: "1"
+    sysctl_set: yes
+    state: present
+    reload: yes

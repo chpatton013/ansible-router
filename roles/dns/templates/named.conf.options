@@ -1,0 +1,34 @@
+# /etc/bind/named.conf.options
+
+options {
+  directory "/var/cache/bind";
+
+  # Only respond to requests coming from the specified IP address.
+  listen-on { {{address}}; };
+  # Do not listed on any IPv6 addresses.
+  listen-on-v6 { none; };
+
+  # Upstream servers that unknown queries will be forwarded to.
+  forwarders {
+{% for forwarder in forwarders %}
+    {{forwarder}};
+{% endfor %}
+  };
+
+  # Pass requests for unknown queries onto forwarders on behalf of clients
+  # (instead of instantly returning a referral response). Responses from
+  # upstream forwarders will be cached, and returned locally on subsequent
+  # requests.
+  recursion yes;
+
+  # Prevent any other hosts from copying zone information from the server.
+  allow-transfer { none; };
+
+  # Server will attempt to validate replies from DNSSEC enabled zones.
+  dnssec-validation auto;
+
+  # Allow the server to answer authoritatively when returning NXDOMAIN.
+  # Default to 'no', per RFC1035.
+  auth-nxdomain no;
+};
+
