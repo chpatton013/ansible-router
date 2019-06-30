@@ -24,7 +24,7 @@
 - name: Reload DHCP service
   systemd:
     name: isc-dhcp-server.service
-    state: reloaded
+    state: restarted
   when: dhcpd_config.changed or dhcp_defaults.changed
   become: yes
 - name: Enable DHCP service
