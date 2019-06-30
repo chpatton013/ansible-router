@@ -6,6 +6,7 @@ import argparse
 import ipaddress
 import os
 import re
+import subprocess
 import sys
 import yaml
 
@@ -15,7 +16,7 @@ DEFAULT_DOMAIN_LISTS_DIR = "{{domain_lists_dir}}"
 DEFAULT_ZONES_DIR = "{{zones_dir}}"
 
 
-def parse_args():
+def _parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--lists-file", default=DEFAULT_DOMAIN_LISTS_FILE)
     parser.add_argument("--lists-dir", default=DEFAULT_DOMAIN_LISTS_DIR)
@@ -36,42 +37,30 @@ def parse_args():
     return parser.parse_args()
 
 
-def read_domain_lists_file(domain_lists_file_path):
+def _read_domain_lists_file(domain_lists_file_path):
     return yaml.load(open(domain_lists_file_path, "r"), Loader=yaml.SafeLoader)
 
 
-def read_ignore_file(ignore_file_path):
-    try:
-        return open(ignore_file_path, "r").read()
-    except IOError:
-        return ""
+def _db_file_path(zones_dir, list_zone):
+    return os.path.join(zones_dir, "db-forward.{}.records".format(list_zone))
 
 
-def zone_file_path(zones_dir, list_name):
-    return os.path.join(zones_dir, "zone.{}".format(list_name))
-
-
-def domain_list_file_path(lists_dir, list_name):
+def _domain_list_file_path(lists_dir, list_name):
     return os.path.join(lists_dir, "list.{}".format(list_name))
 
 
-def zone_file_outdated(zone_file_path, list_file_path):
+def _db_file_outdated(db_file_path, list_file_path):
     try:
-        return (
-            os.path.getmtime(zone_file_path) > os.path.getmtime(list_file_path)
-        )
+        return os.path.getmtime(db_file_path) > os.path.getmtime(list_file_path)
     except OSError:
         return False
 
 
-def domain_to_zone(domain, zone_file):
-    return "zone \"{}\" {{'{{'}} type master; file \"{}\"; {{'}}'}};\n".format(
-        domain,
-        zone_file,
-    )
+def _domain_to_record(domain, record):
+    return "{} {}\n".format(domain, record)
 
 
-def is_domain_name(candidate):
+def _is_domain_name(candidate):
     try:
         # IP addresses are not valid domain names.
         ipaddress.ip_address(unicode(candidate))
@@ -84,66 +73,57 @@ def is_domain_name(candidate):
     return domain_part and top_level_domain
 
 
-def strip_comments(content):
+def _strip_comments(content):
     return "\n".join(
         [re.sub(r"#.*$", r"", line) for line in content.splitlines()],
     )
 
 
-def generate_domains(content, ignore=set()):
-    for match in re.finditer(r"(\S+)", strip_comments(content)):
+def _generate_domains(content):
+    # Extract "words" from `content`, and yield any that pass our domain filter.
+    for match in re.finditer(r"(\S+)", _strip_comments(content)):
         for group in match.groups():
-            if is_domain_name(group) and group not in ignore:
-                yield group.lower()
+            domain_candidate = group.lower()
+            if _is_domain_name(domain_candidate):
+                yield domain_candidate
 
 
-def domain_list_file_to_zone_file(domains, zone_file):
-    with open(zone_file, "w") as f:
+def _domain_list_file_to_db_file(domains, record, db_file):
+    with open(db_file, "w") as f:
         for domain in domains:
-            f.write(domain_to_zone(domain, zone_file))
+            f.write(_domain_to_record(domain, record))
 
 
-def domain_lists_to_zone_files(zone, zones_dir, lists_dir):
-    zone_file_path_ = zone_file_path(zones_dir, zone["zone"])
-
-    ignore_domains = {
-        domain
-        for domain in generate_domains(
-            strip_comments(read_ignore_file(zone["ignore_file"])),
-        )
-    }
+def _domain_lists_to_db_file(zone, zones_dir, lists_dir):
+    db_file_path = _db_file_path(zones_dir, zone["zone"])
 
     updated = []
     domains = set()
     for domain_list in zone["lists"]:
-        domain_list_file_path_ = domain_list_file_path(
+        domain_list_file_path = _domain_list_file_path(
             lists_dir,
             domain_list["name"],
         )
-        if zone_file_outdated(zone_file_path_, domain_list_file_path_):
+        if _db_file_outdated(db_file_path, domain_list_file_path):
             updated.append(domain_list)
 
-        domain_file_content = open(domain_list_file_path_, "r").read()
-        for domain in generate_domains(domain_file_content, ignore_domains):
+        domain_file_content = open(domain_list_file_path, "r").read()
+        for domain in _generate_domains(domain_file_content):
             domains.add(domain)
 
-    domain_list_file_to_zone_file(sorted(domains), zone_file_path_)
+    _domain_list_file_to_db_file(sorted(domains), zone["record"], db_file_path)
 
     return updated
 
 
-def domain_lists_to_zone_file(zones, *args, **kwargs):
+def _domain_lists_to_db_files(zones, *args, **kwargs):
     updated = []
     for zone in zones:
-        updated.extend(domain_lists_to_zone_files(
-            zone,
-            *args,
-            **kwargs
-        ))
+        updated.extend(_domain_lists_to_db_file(zone, *args, **kwargs))
     return updated
 
 
-def reload_bind():
+def _reload_bind():
     service_name = "bind9.service"
     try:
         subprocess.check_output(["systemctl", "status", service_name])
@@ -155,17 +135,17 @@ def reload_bind():
 
 
 def main():
-    args = parse_args()
+    args = _parse_args()
 
-    domain_lists_zones = read_domain_lists_file(args.lists_file)
-    updated = domain_lists_to_zone_file(
+    domain_lists_zones = _read_domain_lists_file(args.lists_file)
+    updated = _domain_lists_to_db_files(
         domain_lists_zones,
         args.zones_dir,
         args.lists_dir,
     )
 
-    if len(updated) and (args.reload_bind is True or args.reload_bind is None):
-        reload_bind()
+    if updated and (args.reload_bind is True or args.reload_bind is None):
+        _reload_bind()
 
     return 0
 

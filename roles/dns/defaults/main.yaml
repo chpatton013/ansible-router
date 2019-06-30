@@ -4,7 +4,13 @@ forwarders:
 - 1.1.1.1
 address: 10.255.0.1
 domain_lists_zones:
+- zone: sinkhole-whitelist
+  record: "CNAME ."
+  lists:
+  - name: sinkhole-whitelist
+    path: /var/local/whitelist
 - zone: sinkhole-blacklist
+  record: "A 0.0.0.0"
   lists:
   - name: steven_black
     url: https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts
@@ -20,7 +26,6 @@ domain_lists_zones:
     url: https://s3.amazonaws.com/lists.disconnect.me/simple_ad.txt
   - name: hosts_file
     url: https://hosts-file.net/ad_servers.txt
-  ignore_file: /etc/bind/lists/list.ignore
 domain_lists_file: /etc/bind/lists.yaml
 domain_lists_dir: /etc/bind/lists
 zones_dir: /etc/bind/zones
@@ -28,15 +33,15 @@ zones:
 - name: home
   domain: home.chrispatton.dev
   ttl: 60
+  owner: "@"
+  name_server_subdomain: dns
+  name_server_ip_address: 10.255.0.1
+  email_address: hostmaster
   soa:
-    owner: "@"
-    domain: home.chrispatton.dev
-    name_server: dns
-    email_address: hostmaster
     refresh: 7200
     retry: 120
     expire: 3600
-    negative_cache_ttl: 120
+    minimum: 120
   reverse_zones:
   - name: routing
     ip_address: 10.255.0
@@ -60,23 +65,38 @@ zones:
       ip_address: "1"
   root: 10.255.0.1
   wildcard: 10.255.0.1
-- name: sinkhole-blacklist
-  allow_query:
-  - none
-  domain: "*"
+- name: sinkhole-whitelist
+  domain: home.chrispatton.dev
   ttl: 60
+  owner: "@"
+  name_server_subdomain: dns
+  name_server_ip_address: 10.255.0.1
+  email_address: hostmaster
   soa:
-    owner: "@"
-    domain: home.chrispatton.dev
-    name_server: dns
-    email_address: hostmaster
     refresh: 7200
     retry: 120
     expire: 3600
-    negative_cache_ttl: 120
+    minimum: 120
   includes:
-  - "{{zones_dir}}/db.sinkhole-blacklist.fragment"
-response_policies:
-- zone: sinkhole-whitelist
-  policy: PASSTHRU
-- zone: sinkhole-blacklist
+  - "{{zones_dir}}/db-forward.sinkhole-whitelist.records"
+- name: sinkhole-blacklist
+  allow_query:
+  - none
+  domain: home.chrispatton.dev
+  ttl: 60
+  owner: "@"
+  name_server_subdomain: dns
+  name_server_ip_address: 10.255.0.1
+  email_address: hostmaster
+  soa:
+    refresh: 7200
+    retry: 120
+    expire: 3600
+    minimum: 120
+  includes:
+  - "{{zones_dir}}/db-forward.sinkhole-blacklist.records"
+options:
+  response_policies:
+  - zone: sinkhole-whitelist
+    policy: PASSTHRU
+  - zone: sinkhole-blacklist

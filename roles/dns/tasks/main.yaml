@@ -43,7 +43,7 @@
 - name: Render named forward zone templates
   template:
     src: db.forward_zone
-    dest: "{{zones_dir}}/db.{{forward_zone.name}}"
+    dest: "{{zones_dir}}/db-forward.{{forward_zone.name}}"
     owner: root
     group: root
     mode: 0644
@@ -54,7 +54,7 @@
 - name: Render named reverse zone templates
   template:
     src: db.reverse_zone
-    dest: "{{zones_dir}}/db.{{reverse_zone.name}}"
+    dest: "{{zones_dir}}/db-reverse.{{reverse_zone.name}}"
     owner: root
     group: root
     mode: 0644
@@ -105,15 +105,16 @@
   command: named-checkconf /etc/bind/named.conf
   become: yes
 - name: Check named forward zones
-  command: named-checkzone {{item.domain}} {{zones_dir}}/db.{{item.name}}
+  command: >
+    named-checkzone {{item.domain}} {{zones_dir}}/db-forward.{{item.name}}
   loop: "{{zones}}"
   become: yes
 - name: Check named reverse zones
   command: >
     named-checkzone
       {{item.1.ip_address.split(".") | reverse | join(".")}}.in-addr.arpa
-      {{zones_dir}}/db.{{item.1.name}}
-  loop: "{{zones | subelements('reverse_zones')}}"
+      {{zones_dir}}/db-reverse.{{item.1.name}}
+  loop: "{{zones | subelements('reverse_zones', skip_missing=True)}}"
   become: yes
 - name: Enable BIND9 service
   systemd:

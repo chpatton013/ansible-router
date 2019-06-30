@@ -3,23 +3,26 @@
 ;
 
 $TTL {{forward_zone.ttl}}
-{{forward_zone.soa.owner}} IN SOA {{forward_zone.soa.name_server}}.{{forward_zone.soa.domain}}. {{forward_zone.soa.email_address}}.{{forward_zone.soa.domain}}. (
-  {{ansible_date_time.epoch}}             ; Serial
-  {{forward_zone.soa.refresh}}            ; Refresh
-  {{forward_zone.soa.retry}}              ; Retry
-  {{forward_zone.soa.expire}}             ; Expire
-  {{forward_zone.soa.negative_cache_ttl}} ; Negative Cache TTL
+{{forward_zone.owner}} IN SOA {{forward_zone.name_server_subdomain}}.{{forward_zone.domain}}. {{forward_zone.email_address}}.{{forward_zone.domain}}. (
+  {{ansible_date_time.epoch}}   ; Serial
+  {{forward_zone.soa.refresh}}  ; Refresh
+  {{forward_zone.soa.retry}}    ; Retry
+  {{forward_zone.soa.expire}}   ; Expire
+  {{forward_zone.soa.minimum}}  ; Minimum
 )
 
 ; Name server: NS Record
-  IN NS {{forward_zone.soa.name_server}}.{{forward_zone.soa.domain}}.
-{% if forward_zone.reverse_zones is not undefined %}
+@ IN NS {{forward_zone.name_server_subdomain}}.{{forward_zone.domain}}.
 
+; Name server: GLUE Record
+{{forward_zone.name_server_subdomain}}.{{forward_zone.domain}}. IN A {{forward_zone.name_server_ip_address}}
+{% if forward_zone.reverse_zones is not undefined %}
 {% for reverse_zone in forward_zone.reverse_zones %}
+
 ; Reverse zone: {{reverse_zone.name}}
 {% if reverse_zone.services is not undefined %}
 
-; Router services: A Records
+; Services: A Records
 {% for service in reverse_zone.services %}
 {% for subdomain in service.subdomains %}
 {{subdomain}} IN A {{reverse_zone.ip_address}}.{{service.ip_address}}
@@ -43,12 +46,12 @@ $TTL {{forward_zone.ttl}}
 {% if forward_zone.wildcard is not undefined %}
 
 ; Wildcard: A Record
-*. IN A {{forward_zone.wildcard}}
+* IN A {{forward_zone.wildcard}}
 {% endif %}
 {% if forward_zone.includes is not undefined %}
 
 ; Includes
 {% for include in forward_zone.includes %}
-$INCLUDE include
+$INCLUDE {{include}}
 {% endfor %}
 {% endif %}

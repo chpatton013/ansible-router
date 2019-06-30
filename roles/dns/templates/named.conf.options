@@ -30,5 +30,16 @@ options {
   # Allow the server to answer authoritatively when returning NXDOMAIN.
   # Default to 'no', per RFC1035.
   auth-nxdomain no;
+
+{% if options.response_policies is not undefined %}
+  response-policy {
+{% for response_policy in options.response_policies %}
+    zone "{{response_policy.zone}}"
+      {%- if response_policy.policy is not undefined %}
+      policy {{response_policy.policy}}
+      {%- endif %};
+{% endfor %}
+  };
+{% endif %}
 };
 

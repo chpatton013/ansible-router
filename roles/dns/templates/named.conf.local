@@ -1,21 +1,17 @@
 # /etc/bind/named.conf.local
 
-{% for zone in domain_lists_zones %}
-include "{{zones_dir}}/zone.{{zone.zone}}";
-{% endfor %}
-
 # Forward Zones
 {% for forward_zone in zones %}
 zone "{{forward_zone.name}}" {
   type master;
-  file "{{zones_dir}}/db.{{forward_zone.name}}";
-  {%- if forward_zone.allow_query is not undefined -%}
+  file "{{zones_dir}}/db-forward.{{forward_zone.name}}";
+{% if forward_zone.allow_query is not undefined %}
   allow-query {
-    {%- for allow_query in forward_zone.allow_query -%}
-      {{allow_query}}
-    {%- endfor -%}
+{% for allow_query in forward_zone.allow_query %}
+    {{allow_query}};
+{% endfor %}
   };
-  {%- endif -%}
+{% endif %}
 };
 {% endfor %}
 
@@ -23,21 +19,10 @@ zone "{{forward_zone.name}}" {
 {% for forward_zone in zones %}
 {% if forward_zone.reverse_zones is not undefined %}
 {% for reverse_zone in forward_zone.reverse_zones %}
-zone "{{reverse_zone.name.split(".") | reverse | join(".")}}.in-addr.arpa" {
+zone "{{reverse_zone.name.split('.') | reverse | join('.')}}.in-addr.arpa" {
   type master;
-  file "{{zones_dir}}/db.{{reverse_zone.name}}";
+  file "{{zones_dir}}/db-reverse.{{reverse_zone.name}}";
 };
 {% endfor %}
 {% endif %}
 {% endfor %}
-
-{% if response_policies is not undefined %}
-response-policy {
-  {%- for response_policy in response_policies -%}
-  zone {{response_policy.zone}}
-    {%- if response_policy.policy is not undefined -%}
-    policy {{response_policy.policy}}
-    {%- endif -%};
-  {%- endfor -%}
-}
-{% endif %}
