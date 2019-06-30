@@ -6,11 +6,18 @@ if [[ "$(id --user)" != 0 ]]; then
   exit 1
 fi
 
-if ! which python &>/dev/null || ! which pip &>/dev/null; then
-  apt-get update
-  apt-get install --assume-yes python python-pip
+if [ -z "${SETUP_LOG_FILE:-}" ]; then
+  SETUP_LOG_FILE=/tmp/setup.log
 fi
+echo Writing output to log file $SETUP_LOG_FILE
 
-pip install --requirement requirements.txt
+(
+  if ! which python &>/dev/null || ! which pip &>/dev/null; then
+    apt-get update
+    apt-get install --assume-yes python python-pip
+  fi
 
-ansible-playbook playbook.yaml "$@"
+  pip install --requirement requirements.txt
+
+  ANSIBLE_FORCE_COLOR=true ansible-playbook playbook.yaml "$@"
+) |& tee "$SETUP_LOG_FILE"
