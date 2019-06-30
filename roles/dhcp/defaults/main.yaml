@@ -6,7 +6,7 @@ domain_search:
 default_lease_time: 600
 max_lease_time: 7200
 hosts:
-- name: static_routee
+- name: static-routee
   comment: A test host with a static IP.
   configuration:
     hardware ethernet: 08:00:27:2a:bb:d5

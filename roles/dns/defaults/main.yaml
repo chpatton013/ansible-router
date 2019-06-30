@@ -56,7 +56,7 @@ zones:
   - name: static
     ip_address: 10.255.1
     static_hosts:
-    - domain_name: static_routee
+    - domain_name: static-routee
       ip_address: "1"
   root: 10.255.0.1
   wildcard: 10.255.0.1
