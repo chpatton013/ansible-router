@@ -6,6 +6,8 @@ if [[ "$(id --user)" != 0 ]]; then
   exit 1
 fi
 
+script_dir="$(builtin cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 if [ -z "${SETUP_LOG_FILE:-}" ]; then
   SETUP_LOG_FILE=/tmp/setup.log
 fi
@@ -29,16 +31,16 @@ function get_pip() {
     return
   fi
   echo Installing Pip...
-  curl https://bootstrap.pypa.io/get-pip.py | bash
+  wget --quiet --output-document=- https://bootstrap.pypa.io/get-pip.py | python
 }
 
 function get_dependencies() {
   echo Installing dependencies...
-  pip install --requirement requirements.txt
+  pip install --requirement "$script_dir/requirements.txt"
 }
 
 function run_playbook() {
-  ANSIBLE_FORCE_COLOR=true ansible-playbook playbook.yaml "$@"
+  ANSIBLE_FORCE_COLOR=true ansible-playbook "$script_dir/playbook.yaml" "$@"
 }
 
 (
