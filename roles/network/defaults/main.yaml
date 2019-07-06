@@ -35,10 +35,10 @@ interfaces:
   event: auto
   method: static
   configuration:
-  - address 10.255.0.1
+  - address 10.254.0.1
   - netmask 255.255.252.0
-  - broadcast 10.255.0.255
+  - broadcast 10.254.0.255
   - bridge_ports enp0s8 enp0s9
   - bridge_stp "on"
   - dns-search home.chrispatton.dev
-  - dns-nameservers 10.255.0.1
+  - dns-nameservers 10.254.0.1

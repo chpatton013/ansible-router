@@ -2,7 +2,7 @@
 forwarders:
 - 1.0.0.1
 - 1.1.1.1
-address: 10.255.0.1
+address: 10.254.0.1
 domain_lists_zones:
 - zone: sinkhole-whitelist
   record: "CNAME ."
@@ -35,7 +35,7 @@ zones:
   ttl: 60
   owner: "@"
   name_server_subdomain: dns
-  name_server_ip_address: 10.255.0.1
+  name_server_ip_address: 10.254.0.1
   email_address: hostmaster
   soa:
     refresh: 7200
@@ -44,7 +44,7 @@ zones:
     minimum: 120
   reverse_zones:
   - name: routing
-    ip_address: 10.255.0
+    ip_address: 10.254.0
     services:
     - ip_address: "1"
       subdomains:
@@ -59,18 +59,18 @@ zones:
       subdomains:
       - broadcast
   - name: static
-    ip_address: 10.255.1
+    ip_address: 10.254.1
     static_hosts:
     - domain_name: static-routee
       ip_address: "1"
-  root: 10.255.0.1
-  wildcard: 10.255.0.1
+  root: 10.254.0.1
+  wildcard: 10.254.0.1
 - name: sinkhole-whitelist
   domain: home.chrispatton.dev
   ttl: 60
   owner: "@"
   name_server_subdomain: dns
-  name_server_ip_address: 10.255.0.1
+  name_server_ip_address: 10.254.0.1
   email_address: hostmaster
   soa:
     refresh: 7200
@@ -86,7 +86,7 @@ zones:
   ttl: 60
   owner: "@"
   name_server_subdomain: dns
-  name_server_ip_address: 10.255.0.1
+  name_server_ip_address: 10.254.0.1
   email_address: hostmaster
   soa:
     refresh: 7200
