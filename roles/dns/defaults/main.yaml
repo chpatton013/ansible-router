@@ -1,102 +1,105 @@
 ---
-forwarders:
-- 1.0.0.1
-- 1.1.1.1
-address: 10.254.0.1
-domain_lists_zones:
-- zone: sinkhole-whitelist
-  record: "CNAME ."
-  lists:
-  - name: sinkhole-whitelist
-    path: /var/local/whitelist
-- zone: sinkhole-blacklist
-  record: "A 0.0.0.0"
-  lists:
-  - name: steven_black
-    url: https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts
-  - name: malware_domains
-    url: https://mirror1.malwaredomains.com/files/justdomains
-  - name: cameleon
-    url: http://sysctl.org/cameleon/hosts
-  - name: zeus_tracker
-    url: https://zeustracker.abuse.ch/blocklist.php?download=domainblocklist
-  - name: disconnect_me_tracking
-    url: https://s3.amazonaws.com/lists.disconnect.me/simple_tracking.txt
-  - name: disconnect_me_ads
-    url: https://s3.amazonaws.com/lists.disconnect.me/simple_ad.txt
-  - name: hosts_file
-    url: https://hosts-file.net/ad_servers.txt
-domain_lists_file: /etc/bind/lists.yaml
-domain_lists_dir: /etc/bind/lists
-zones_dir: /etc/bind/zones
-zones:
-- name: home
-  domain: home.chrispatton.dev
-  ttl: 60
-  owner: "@"
-  name_server_subdomain: dns
-  name_server_ip_address: 10.254.0.1
-  email_address: hostmaster
-  soa:
-    refresh: 7200
-    retry: 120
-    expire: 3600
-    minimum: 120
-  reverse_zones:
-  - name: routing
-    ip_address: 10.254.0
-    services:
-    - ip_address: "1"
-      subdomains:
-      - dhcp
-      - dns
-      - gateway
-      - ntp
-      - router
-      - vpn
-      - web
-    - ip_address: "255"
-      subdomains:
-      - broadcast
-  - name: static
-    ip_address: 10.254.1
-    static_hosts:
-    - domain_name: static-routee
-      ip_address: "1"
-  root: 10.254.0.1
-  wildcard: 10.254.0.1
-- name: sinkhole-whitelist
-  domain: home.chrispatton.dev
-  ttl: 60
-  owner: "@"
-  name_server_subdomain: dns
-  name_server_ip_address: 10.254.0.1
-  email_address: hostmaster
-  soa:
-    refresh: 7200
-    retry: 120
-    expire: 3600
-    minimum: 120
-  includes:
-  - "{{zones_dir}}/db-forward.sinkhole-whitelist.records"
-- name: sinkhole-blacklist
-  allow_query:
-  - none
-  domain: home.chrispatton.dev
-  ttl: 60
-  owner: "@"
-  name_server_subdomain: dns
-  name_server_ip_address: 10.254.0.1
-  email_address: hostmaster
-  soa:
-    refresh: 7200
-    retry: 120
-    expire: 3600
-    minimum: 120
-  includes:
-  - "{{zones_dir}}/db-forward.sinkhole-blacklist.records"
-options:
-  response_policies:
+_root_dir: "{{router_root_dir}}/dns"
+_bin_dir: "{{_root_dir}}/bin"
+_share_dir: "{{_root_dir}}/share"
+_etc_dir: "{{router_etc_dir}}/dns"
+_etc_zones_dir: "{{_etc_dir}}/zones"
+_var_dir: "{{router_var_dir}}/dns"
+_var_zones_dir: "{{_var_dir}}/zones"
+_var_forward_zones_dir: "{{_var_zones_dir}}/forward"
+dns:
+  bin_dir: "{{_bin_dir}}"
+  etc_dir: "{{_etc_dir}}"
+  etc_zones_dir: "{{_etc_zones_dir}}"
+  etc_forward_zones_dir: "{{_etc_zones_dir}}/forward"
+  etc_reverse_zones_dir: "{{_etc_zones_dir}}/reverse"
+  var_dir: "{{_var_dir}}"
+  var_zones_dir: "{{_var_zones_dir}}"
+  var_forward_zones_dir: "{{_var_forward_zones_dir}}"
+  domain_list_zones_bin: "{{_bin_dir}}/domain-list-zones.py"
+  domain_lists_dir: "{{_var_dir}}/domain_lists"
+  domain_lists_file: "{{_etc_dir}}/domain_list_zones.yaml"
+  domain_list_zones:
   - zone: sinkhole-whitelist
-    policy: PASSTHRU
+    record: "CNAME ."
+    domains:
+    - "{{_share_dir}}/sinkhole-whitelist.domains"
   - zone: sinkhole-blacklist
+    record: "A 0.0.0.0"
+    references:
+    - "{{_share_dir}}/sinkhole-blacklist.references"
+  forwarders:
+  - 1.0.0.1
+  - 1.1.1.1
+  address: 10.254.0.1
+  zones:
+  - name: home
+    domain: home.chrispatton.dev
+    ttl: 60
+    owner: "@"
+    name_server_subdomain: dns
+    name_server_ip_address: 10.254.0.1
+    email_address: hostmaster
+    soa:
+      refresh: 7200
+      retry: 120
+      expire: 3600
+      minimum: 120
+    reverse_zones:
+    - name: routing
+      ip_address: 10.254.0
+      services:
+      - ip_address: "1"
+        subdomains:
+        - dhcp
+        - dns
+        - gateway
+        - ntp
+        - router
+        - vpn
+        - web
+      - ip_address: "255"
+        subdomains:
+        - broadcast
+    - name: static
+      ip_address: 10.254.1
+      static_hosts:
+      - domain_name: static-routee
+        ip_address: "1"
+    root: 10.254.0.1
+    wildcard: 10.254.0.1
+  - name: sinkhole-whitelist
+    domain: home.chrispatton.dev
+    ttl: 60
+    owner: "@"
+    name_server_subdomain: dns
+    name_server_ip_address: 10.254.0.1
+    email_address: hostmaster
+    soa:
+      refresh: 7200
+      retry: 120
+      expire: 3600
+      minimum: 120
+    includes:
+    - "{{_var_forward_zones_dir}}/sinkhole-whitelist.db.records"
+  - name: sinkhole-blacklist
+    allow_query:
+    - none
+    domain: home.chrispatton.dev
+    ttl: 60
+    owner: "@"
+    name_server_subdomain: dns
+    name_server_ip_address: 10.254.0.1
+    email_address: hostmaster
+    soa:
+      refresh: 7200
+      retry: 120
+      expire: 3600
+      minimum: 120
+    includes:
+    - "{{_var_forward_zones_dir}}/sinkhole-blacklist.db.records"
+  options:
+    response_policies:
+    - zone: sinkhole-whitelist
+      policy: PASSTHRU
+    - zone: sinkhole-blacklist

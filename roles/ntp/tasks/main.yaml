@@ -3,6 +3,17 @@
   apt:
     name: ntp
   become: yes
+- name: Create NTP directories
+  file:
+    path: "{{item}}"
+    state: directory
+    owner: root
+    group: root
+    mode: 0755
+  with_items:
+  - "{{ntp.bin_dir}}"
+  - "{{ntp.var_dir}}"
+  become: yes
 - name: Render NTP config template
   template:
     src: ntp.conf
@@ -12,25 +23,37 @@
     mode: 0644
   register: ntp_config
   become: yes
-- name: Render NTP cron task template
+- name: Render leap seconds template
   template:
-    src: user.ntp-leap-seconds-list
-    dest: /etc/cron.daily/user.ntp-leap-seconds-list
+    src: leap-seconds.sh
+    dest: "{{ntp.leap_seconds_bin}}"
     owner: root
     group: root
     mode: 0755
   become: yes
+- name: Add leap seconds bin to cron
+  file:
+    src: "{{ntp.leap_seconds_bin}}"
+    dest: /etc/cron.daily/router.ntp.leap-seconds
+    state: link
+    owner: root
+    group: root
+    mode: 0755
+  become: yes
+- name: Run leap seconds bin
+  command: "{{ntp.leap_seconds_bin}}"
+  become: yes
 - name: Stat IETF leap seconds file
   stat:
-    path: "{{leap_seconds_file}}"
+    path: "{{ntp.leap_seconds_file}}"
   register: ntp_leap_stat
 - name: Calculate leap seconds file expiration
   command: date --date="2 days ago" "+%s"
   register: ntp_leap_expiration
 - name: Download IETF leap seconds file
   get_url:
-    url: "{{leap_seconds_url}}"
-    dest: "{{leap_seconds_file}}"
+    url: "{{ntp.leap_seconds_url}}"
+    dest: "{{ntp.leap_seconds_file}}"
     owner: ntp
     group: ntp
     mode: 0644

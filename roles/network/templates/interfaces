@@ -5,7 +5,7 @@
 
 source /etc/network/interfaces.d/*
 
-{% for interface in interfaces %}
+{% for interface in network.interfaces %}
 {% if interface.comment is not undefined %}
 {% for line in interface.comment.splitlines() %}
 # {{line}}

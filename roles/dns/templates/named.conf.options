@@ -4,13 +4,13 @@ options {
   directory "/var/cache/bind";
 
   # Only respond to requests coming from the specified IP address.
-  listen-on { {{address}}; };
+  listen-on { {{dns.address}}; };
   # Do not listed on any IPv6 addresses.
   listen-on-v6 { none; };
 
   # Upstream servers that unknown queries will be forwarded to.
   forwarders {
-{% for forwarder in forwarders %}
+{% for forwarder in dns.forwarders %}
     {{forwarder}};
 {% endfor %}
   };
@@ -31,9 +31,9 @@ options {
   # Default to 'no', per RFC1035.
   auth-nxdomain no;
 
-{% if options.response_policies is not undefined %}
+{% if dns.options.response_policies is not undefined %}
   response-policy {
-{% for response_policy in options.response_policies %}
+{% for response_policy in dns.options.response_policies %}
     zone "{{response_policy.zone}}"
       {%- if response_policy.policy is not undefined %}
       policy {{response_policy.policy}}
@@ -42,4 +42,3 @@ options {
   };
 {% endif %}
 };
-

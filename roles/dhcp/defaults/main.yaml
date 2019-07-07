@@ -1,36 +1,37 @@
 ---
-interfaces: br0
-domain_name: home.chrispatton.dev
-domain_search:
-- home.chrispatton.dev
-default_lease_time: 600
-max_lease_time: 7200
-hosts:
-- name: static-routee
-  comment: A test host with a static IP.
-  configuration:
-    hardware ethernet: 08:00:27:2a:bb:d5
-    fixed-address: 10.254.1.1
-subnets:
-- number: 10.254.0.0
-  netmask: 255.255.252.0
-  comment: One subnet to rule them all.
-  options:
-    subnet-mask: 255.255.252.0
-    broadcast-address: 10.254.0.255
-    routers: 10.254.0.1
-    domain-name-servers: 10.254.0.1
-    ntp-servers: 10.254.0.1
-  pools:
-  - range:
-      first: 10.254.1.1
-      last: 10.254.1.255
-    comment: Pool for static DHCP leases. Only known hosts are permitted.
-    denials:
-    - unknown-clients
-  - range:
-      first: 10.254.2.1
-      last: 10.254.2.255
-    comment: Pool for dynamic DHCP leases. Only unknown hosts are permitted.
-    allowances:
-    - unknown-clients
+dhcp:
+  interfaces: br0
+  domain_name: home.chrispatton.dev
+  domain_search:
+  - home.chrispatton.dev
+  default_lease_time: 600
+  max_lease_time: 7200
+  hosts:
+  - name: static-routee
+    comment: A test host with a static IP.
+    configuration:
+      hardware ethernet: 08:00:27:2a:bb:d5
+      fixed-address: 10.254.1.1
+  subnets:
+  - number: 10.254.0.0
+    netmask: 255.255.252.0
+    comment: One subnet to rule them all.
+    options:
+      subnet-mask: 255.255.252.0
+      broadcast-address: 10.254.0.255
+      routers: 10.254.0.1
+      domain-name-servers: 10.254.0.1
+      ntp-servers: 10.254.0.1
+    pools:
+    - range:
+        first: 10.254.1.1
+        last: 10.254.1.255
+      comment: Pool for static DHCP leases. Only known hosts are permitted.
+      denials:
+      - unknown-clients
+    - range:
+        first: 10.254.2.1
+        last: 10.254.2.255
+      comment: Pool for dynamic DHCP leases. Only unknown hosts are permitted.
+      allowances:
+      - unknown-clients

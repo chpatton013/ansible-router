@@ -14,9 +14,9 @@ DHCPDv4_PID=/var/run/dhcpd.pid
 
 # On what interfaces should the DHCP server (dhcpd) serve DHCP requests?
 #  Separate multiple interfaces with spaces, e.g. "eth0 eth1".
-{% if interfaces is undefined %}
+{% if dhcp.interfaces is undefined %}
 INTERFACESv4=""
 {% else %}
-INTERFACESv4="{{interfaces}}"
+INTERFACESv4="{{dhcp.interfaces}}"
 {% endif %}
 # INTERFACESv6=""

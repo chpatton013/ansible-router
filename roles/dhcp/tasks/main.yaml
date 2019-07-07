@@ -21,7 +21,7 @@
     mode: 644
   register: dhcp_defaults
   become: yes
-- name: Reload DHCP service
+- name: Restart DHCP service
   systemd:
     name: isc-dhcp-server.service
     state: restarted

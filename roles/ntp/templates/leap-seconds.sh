@@ -4,7 +4,7 @@ set -euo pipefail
 tmpfile="$(mktemp)"
 
 # Download the current listing of leap seconds from IETF to a temp file.
-wget --no-cache --output-document="$tmpfile" {{leap_seconds_url}}
+wget --no-cache --output-document="$tmpfile" {{ntp.leap_seconds_url}}
 
 # Ensure the temp file is not empty.
 test -s "$tmpfile"
@@ -14,4 +14,4 @@ chown ntp:ntp "$tmpfile"
 chmod 644 "$tmpfile"
 
 # Overwrite the old leap seconds listing.
-mv "$tmpfile" {{leap_seconds_file}}
+mv "$tmpfile" {{ntp.leap_seconds_file}}

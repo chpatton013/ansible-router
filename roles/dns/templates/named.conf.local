@@ -1,10 +1,10 @@
 # /etc/bind/named.conf.local
 
 # Forward Zones
-{% for forward_zone in zones %}
+{% for forward_zone in dns.zones %}
 zone "{{forward_zone.name}}" {
   type master;
-  file "{{zones_dir}}/db-forward.{{forward_zone.name}}";
+  file "{{dns.etc_forward_zones_dir}}/{{forward_zone.name}}.db";
 {% if forward_zone.allow_query is not undefined %}
   allow-query {
 {% for allow_query in forward_zone.allow_query %}
@@ -16,12 +16,12 @@ zone "{{forward_zone.name}}" {
 {% endfor %}
 
 # Reverse Zones
-{% for forward_zone in zones %}
+{% for forward_zone in dns.zones %}
 {% if forward_zone.reverse_zones is not undefined %}
 {% for reverse_zone in forward_zone.reverse_zones %}
 zone "{{reverse_zone.name.split('.') | reverse | join('.')}}.in-addr.arpa" {
   type master;
-  file "{{zones_dir}}/db-reverse.{{reverse_zone.name}}";
+  file "{{dns.etc_reverse_zones_dir}}/{{reverse_zone.name}}.db";
 };
 {% endfor %}
 {% endif %}

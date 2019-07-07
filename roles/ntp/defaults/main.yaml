@@ -1,3 +1,11 @@
 ---
-leap_seconds_url: https://www.ietf.org/timezones/data/leap-seconds.list
-leap_seconds_file: /var/lib/ntp/leap-seconds.list
+_root_dir: "{{router_root_dir}}/ntp"
+_bin_dir: "{{_root_dir}}/bin"
+_var_dir: "{{router_var_dir}}/ntp"
+ntp:
+  bin_dir: "{{_bin_dir}}"
+  var_dir: "{{_var_dir}}"
+  drift_file: "{{_var_dir}}/drift"
+  leap_seconds_bin: "{{_bin_dir}}/leap-seconds.sh"
+  leap_seconds_file: "{{_var_dir}}/leap-seconds.list"
+  leap_seconds_url: https://www.ietf.org/timezones/data/leap-seconds.list

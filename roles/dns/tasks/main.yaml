@@ -8,6 +8,24 @@
     - bind9utils
     - bind9-doc
   become: yes
+- name: Create DNS directories
+  file:
+    path: "{{item}}"
+    state: directory
+    owner: root
+    group: root
+    mode: 0755
+  with_items:
+  - "{{dns.bin_dir}}"
+  - "{{dns.etc_dir}}"
+  - "{{dns.etc_zones_dir}}"
+  - "{{dns.etc_forward_zones_dir}}"
+  - "{{dns.etc_reverse_zones_dir}}"
+  - "{{dns.var_dir}}"
+  - "{{dns.var_zones_dir}}"
+  - "{{dns.var_forward_zones_dir}}"
+  - "{{dns.domain_lists_dir}}"
+  become: yes
 - name: Copy bind9 defaults file
   copy:
     src: bind9
@@ -32,89 +50,77 @@
     group: root
     mode: 0644
   become: yes
-- name: Create zone file directory
-  file:
-    path: "{{zones_dir}}"
-    state: directory
-    owner: root
-    group: root
-    mode: 0755
-  become: true
 - name: Render named forward zone templates
   template:
     src: db.forward_zone
-    dest: "{{zones_dir}}/db-forward.{{forward_zone.name}}"
+    dest: "{{dns.etc_forward_zones_dir}}/{{forward_zone.name}}.db"
     owner: root
     group: root
     mode: 0644
   vars:
     forward_zone: "{{item}}"
-  loop: "{{zones}}"
+  loop: "{{dns.zones}}"
   become: yes
 - name: Render named reverse zone templates
   template:
     src: db.reverse_zone
-    dest: "{{zones_dir}}/db-reverse.{{reverse_zone.name}}"
+    dest: "{{dns.etc_reverse_zones_dir}}/{{reverse_zone.name}}.db"
     owner: root
     group: root
     mode: 0644
   vars:
     forward_zone: "{{item.0}}"
     reverse_zone: "{{item.1}}"
-  loop: "{{zones | subelements('reverse_zones', {'skip_missing': True})}}"
+  loop: "{{dns.zones | subelements('reverse_zones', {'skip_missing': True})}}"
   become: yes
-- name: Create domain lists directory
-  file:
-    path: "{{domain_lists_dir}}"
-    state: directory
-    owner: root
-    group: root
-    mode: 0755
-  become: true
 - name: Create domain lists file
   copy:
-    content: "{{ domain_lists_zones | to_nice_yaml(indent=2, width=80) }}"
-    dest: "{{domain_lists_file}}"
+    content: "{{dns.domain_list_zones | to_nice_yaml(indent=2, width=80)}}"
+    dest: "{{dns.domain_lists_file}}"
     owner: root
     group: root
     mode: 0644
   become: yes
-- name: Render sync domain lists templates
+- name: Render domain list zones bin template
   template:
-    src: user.dns-0-sync-domain-lists
-    dest: /etc/cron.daily/user.dns-0-sync-domain-lists
+    src: domain-list-zones.py
+    dest: "{{dns.domain_list_zones_bin}}"
     owner: root
     group: root
     mode: 0755
   become: yes
-- name: Render domain lists to zones templates
-  template:
-    src: user.dns-1-domain-lists-to-zones
-    dest: /etc/cron.daily/user.dns-1-domain-lists-to-zones
+- name: Add domain list zones bin to cron
+  file:
+    src: "{{dns.domain_list_zones_bin}}"
+    dest: /etc/cron.daily/router.dns.domain-lists
+    state: link
     owner: root
     group: root
     mode: 0755
   become: yes
-- name: Sync domain list files
-  command: /etc/cron.daily/user.dns-0-sync-domain-lists --allow-expired
-  become: yes
-- name: Generate domain list zones
-  command: /etc/cron.daily/user.dns-1-domain-lists-to-zones --no-reload-bind
+- name: Generate domain list zone files
+  command: >
+    {{dns.domain_list_zones_bin}} --no-reload-bind
   become: yes
 - name: Check named config
   command: named-checkconf /etc/bind/named.conf
   become: yes
 - name: Check named forward zones
   command: >
-    named-checkzone {{item.domain}} {{zones_dir}}/db-forward.{{item.name}}
-  loop: "{{zones}}"
+    named-checkzone
+      {{item.domain}}
+      {{dns.etc_forward_zones_dir}}/{{item.name}}.db
+  loop: "{{dns.zones}}"
   become: yes
 - name: Check named reverse zones
   command: >
     named-checkzone
-      {{item.1.ip_address.split(".") | reverse | join(".")}}.in-addr.arpa
-      {{zones_dir}}/db-reverse.{{item.1.name}}
-  loop: "{{zones | subelements('reverse_zones', skip_missing=True)}}"
+      {{reverse_zone.ip_address.split(".") | reverse | join(".")}}.in-addr.arpa
+      {{dns.etc_reverse_zones_dir}}/{{reverse_zone.name}}.db
+  vars:
+    forward_zone: "{{item.0}}"
+    reverse_zone: "{{item.1}}"
+  loop: "{{dns.zones | subelements('reverse_zones', skip_missing=True)}}"
   become: yes
 - name: Enable BIND9 service
   systemd:
