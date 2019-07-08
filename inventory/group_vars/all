@@ -1,0 +1,4 @@
+---
+router_root_dir: /opt/router
+router_etc_dir: /etc/opt/router
+router_var_dir: /var/opt/router

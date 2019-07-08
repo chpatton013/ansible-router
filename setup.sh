@@ -40,7 +40,9 @@ function get_dependencies() {
 }
 
 function run_playbook() {
-  ANSIBLE_FORCE_COLOR=true ansible-playbook "$script_dir/playbook.yaml" "$@"
+  ANSIBLE_FORCE_COLOR=true ansible-playbook "$script_dir/playbook.yaml" \
+    --inventory-file="$script_dir/inventory/hosts" \
+    "$@"
 }
 
 (
