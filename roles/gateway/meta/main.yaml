@@ -1,2 +1,3 @@
 dependencies:
 - role: system-administration
+- role: network

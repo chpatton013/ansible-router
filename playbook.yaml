@@ -3,7 +3,7 @@
   roles:
   - dhcp
   - dns
-  # - gateway
+  - gateway
   - network
   - ntp
   - system-administration

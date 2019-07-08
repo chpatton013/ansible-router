@@ -1,0 +1,31 @@
+---
+_root_dir: "{{router_root_dir}}/gateway"
+_bin_dir: "{{_root_dir}}/bin"
+gateway:
+  root_dir: "{{_root_dir}}"
+  bin_dir: "{{_bin_dir}}"
+  wan_interface: enp0s3
+  lan_interface: br0
+  loopback_interface: lo
+  iptables_command_file: "{{_root_dir}}/iptables.sh"
+  iptables_rules_bin: "{{_bin_dir}}/iptables-rules.py"
+  iptables_rules_file: /etc/iptables/rules.v4
+  udp_port_scan:
+    list: UDP-PORTSCAN
+    timeout: 60
+  tcp_port_scan:
+    list: TCP-PORTSCAN
+    timeout: 60
+  bruteforce:
+  - protocol: tcp
+    port: 80
+    hitcount: 1
+    timeout: 1
+  firewall_openings:
+  - protocol: tcp
+    port: 80
+  port_mapping:
+  - protocol: tcp
+    source_port: 80
+    destination_port: 8080
+    destination_host: 10.254.1.1

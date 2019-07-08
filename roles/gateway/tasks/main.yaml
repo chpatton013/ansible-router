@@ -1,0 +1,59 @@
+---
+- name: Install gateway packages
+  apt:
+    name: "{{packages}}"
+  vars:
+    packages:
+    - iprange
+    - ipset
+    - iptables
+    - iptables-converter
+    - iptables-persistent
+  become: yes
+- name: Create gateway directories
+  file:
+    path: "{{item}}"
+    state: directory
+    owner: root
+    group: root
+    mode: 0755
+  with_items:
+  - "{{gateway.root_dir}}"
+  - "{{gateway.bin_dir}}"
+  become: yes
+- name: Enable IPv4-forwarding
+  sysctl:
+    name: net.ipv4.ip_forward
+    value: "1"
+    sysctl_set: yes
+    state: present
+    reload: yes
+  become: yes
+- name: Render iptables commands template
+  template:
+    src: iptables.sh
+    dest: "{{gateway.iptables_command_file}}"
+    owner: root
+    group: root
+    mode: 0644
+  become: yes
+- name: Render iptables rules template
+  template:
+    src: iptables-rules.py
+    dest: "{{gateway.iptables_rules_bin}}"
+    owner: root
+    group: root
+    mode: 0755
+  become: yes
+- name: Add iptables rules bin to cron
+  file:
+    src: "{{gateway.iptables_rules_bin}}"
+    dest: /etc/cron.hourly/router.gateway.iptables-rules
+    state: link
+    owner: root
+    group: root
+    mode: 0755
+  become: yes
+- name: Generate iptables rules
+  command: "{{gateway.iptables_rules_bin}}"
+  become: yes
