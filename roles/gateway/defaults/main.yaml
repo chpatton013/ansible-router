@@ -17,7 +17,8 @@ gateway:
     list: TCP-PORTSCAN
     timeout: 60
   bruteforce:
-  - protocol: tcp
+  - list: BRUTEFORCE
+    protocol: tcp
     port: 80
     hitcount: 1
     timeout: 1
