@@ -34,7 +34,7 @@ dns:
   address: 10.254.0.1
   zones:
   - name: home
-    domain: home.chrispatton.dev
+    domain: home.example.com
     ttl: 60
     owner: "@"
     name_server_subdomain: dns
@@ -69,7 +69,7 @@ dns:
     root: 10.254.0.1
     wildcard: 10.254.0.1
   - name: sinkhole-whitelist
-    domain: home.chrispatton.dev
+    domain: home.example.com
     ttl: 60
     owner: "@"
     name_server_subdomain: dns
@@ -85,7 +85,7 @@ dns:
   - name: sinkhole-blacklist
     allow_query:
     - none
-    domain: home.chrispatton.dev
+    domain: home.example.com
     ttl: 60
     owner: "@"
     name_server_subdomain: dns

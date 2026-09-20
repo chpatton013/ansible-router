@@ -1,9 +1,9 @@
 ---
 dhcp:
   interfaces: br0
-  domain_name: home.chrispatton.dev
+  domain_name: home.example.com
   domain_search:
-  - home.chrispatton.dev
+  - home.example.com
   default_lease_time: 600
   max_lease_time: 7200
   hosts:

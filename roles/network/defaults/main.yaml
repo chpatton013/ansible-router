@@ -41,5 +41,5 @@ network:
     - broadcast 10.254.0.255
     - bridge_ports enp0s8 enp0s9
     - bridge_stp "on"
-    - dns-search home.chrispatton.dev
+    - dns-search home.example.com
     - dns-nameservers 10.254.0.1

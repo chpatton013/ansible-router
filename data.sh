@@ -8,4 +8,5 @@ fi
 
 script_dir="$(builtin cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+mkdir --parents /opt/router
 cp --recursive "$script_dir/data/"* /opt/router

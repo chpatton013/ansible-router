@@ -148,8 +148,12 @@ iptables -t filter -A FILTER_REJECT -j REJECT --reject-with icmp-host-unreachabl
 ################################################################################
 # NAT - POSTROUTING
 
+{% if gateway.masquerade_subnets is not undefined %}
 # Perform NAT for internal hosts connecting to external addresses.
-iptables -t nat -A POSTROUTING -o {{gateway.wan_interface}} -j MASQUERADE
+{% for subnet in gateway.masquerade_subnets %}
+iptables -t nat -A POSTROUTING -s {{subnet}} -o {{gateway.wan_interface}} -j MASQUERADE
+{% endfor %}
+{% endif %}
 
 ################################################################################
 # NAT - PREROUTING

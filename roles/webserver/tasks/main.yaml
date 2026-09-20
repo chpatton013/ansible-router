@@ -1,0 +1,73 @@
+---
+- name: Install webserver packages
+  apt:
+    name: "{{packages}}"
+  vars:
+    packages:
+    - nginx
+    - openssl-client
+  become: yes
+- name: Disable default site config
+  file:
+    path: /etc/nginx/sites-enabled/default
+    state: absent
+- name: Create Webserver directories
+  file:
+    path: "{{item}}"
+    state: directory
+    owner: root
+    group: root
+    mode: 0755
+  with_items:
+  - "{{webserver.etc_cert_dir}}"
+  - "{{webserver.etc_proxy_dir}}"
+- name: Render nginx config template
+  template:
+    src: nginx.conf
+    dest: /etc/nginx/nginx.conf
+    owner: root
+    group: root
+    mode: 0644
+  become: yes
+- name: Render nginx HTTP proxy config templates
+  template:
+    src: nginx.http-proxy.conf
+    dest: "{{webserver.etc_proxy_dir}}/http-proxy.{{proxy.subdomain}}.conf}}"
+    owner: root
+    group: root
+    mode: 0644
+  vars:
+    proxy: "{{item}}"
+    domain: "{{_domain}}"
+  loop: "{{webserver.http.proxies}}"
+  become: yes
+- name: Render nginx stream proxy config templates
+  template:
+    src: nginx.stream-proxy.conf
+    dest: "{{webserver.etc_proxy_dir}}/stream-proxy.{{proxy.subdomain}}.conf}}"
+    owner: root
+    group: root
+    mode: 0644
+  vars:
+    proxy: "{{item}}"
+  loop: "{{webserver.stream.proxies}}"
+  become: yes
+- name: Generate SSL dhparams
+  command: >
+    openssl
+      dhparam {{webserver.dhparams_key_size}}
+      -out {{webserver.http.ssl_dhparam}}
+  args:
+    creates: "{{webserver.http.ssl_dhparam}}"
+  become: yes
+- name: Enable nginx service
+  systemd:
+    name: nginx.service
+    state: started
+    enabled: yes
+  become: yes
+- name: Reload nginx service
+  systemd:
+    name: nginx.service
+    state: reloaded
+  become: yes

@@ -1,0 +1,51 @@
+---
+_root_dir: "{{router_root_dir}}/webserver"
+_etc_dir: "{{router_etc_dir}}/webserver"
+_etc_cert_dir: "{{_etc_dir}}/cert"
+_domain: example.com
+webserver:
+  etc_cert_dir: "{{_etc_dir}}/cert"
+  etc_proxy_dir: "{{_etc_dir}}/proxy"
+  dhparams_key_size: 4096
+  core:
+    worker_processes: auto
+  events:
+    worker_connections: 768
+  http:
+    keepalive_timeout: 65
+    types_hash_max_size: 2048
+    server_names_hash_max_size: 1024
+    resolver: 10.254.0.1
+    ssl_protocols:
+    - TLSv1
+    - TLSv1.1
+    - TLSv1.2
+    - TLSv1.3
+    ssl_ciphers:
+    - "HIGH"
+    - "!aNULL"
+    - "!MD5"
+    ssl_session_cache: shared:SSL:10m
+    ssl_session_timeout: 10m
+    ssl_dhparam: dhparam.pem
+    ssl_certificate: "{{_domain}}.crt"
+    ssl_certificate_key: "{{_domain}}.key"
+    ssl_chained_certificate: "{{_domain}}.chained.crt"
+    ssl_trusted_certificate: trusted.chained.crt
+    gzip_compression_level: 4
+    gzip_minimum_length: 1024
+    gzip_mime_types:
+    - application/javascript
+    - application/json
+    - application/xml
+    - application/xml+rss
+    - text/css
+    - text/javascript
+    - text/plain
+    - text/xml
+    proxies:
+    - name: hello
+      location: /
+      server: https://static-routee.home.example.com:443
+  stream:
+    proxies: []

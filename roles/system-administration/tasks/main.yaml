@@ -1,4 +1,28 @@
 ---
+- name: Install package manager packages
+  apt:
+    name: "{{packages}}"
+  vars:
+    packages:
+    - apt-transport-https
+- name: Add Docker GPG key
+  apt_key:
+    url: https://download.docker.com/linux/debian/gpg
+    id: 9DC858229FC7DD38854AE2D88D81803C0EBFCD88
+  register: system_administration_docker_gpg_key
+- name: Add Docker Apt repository
+  apt_repository:
+    repo: >
+      deb [arch=amd64]
+        https://download.docker.com/linux/debian
+        {{ansible_lsb.codename}} stable
+  register: system_administration_docker_apt_repository
+- name: Update Apt package cache
+  apt:
+    update_cache: yes
+  when: (system_administration_docker_gpg_key.changed or
+         system_administration_docker_apt_repository.changed)
+  become: yes
 - name: Install System Administration packages
   apt:
     name: "{{packages}}"
@@ -6,10 +30,29 @@
     packages:
     - apt-config-auto-update
     - apt-listchanges
+    - containerd.io
+    - docker-ce
+    - docker-ce-cli
     - etckeeper
     - git-core
     - mailutils
     - unattended-upgrades
+  become: yes
+- name: Create docker group
+  group:
+    name: docker
+  become: yes
+- name: Add user to docker group
+  user:
+    name: "{{ansible_user_id}}"
+    groups: docker
+    append: yes
+  become: yes
+- name: Enable docker service
+  systemd:
+    name: docker.service
+    state: started
+    enabled: yes
   become: yes
 - name: Copy auto-upgrades config file
   copy:

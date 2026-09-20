@@ -25,6 +25,8 @@ gateway:
   firewall_openings:
   - protocol: tcp
     port: 80
+  masquerade_subnets:
+  - 10.254.0.0/22
   port_mapping:
   - protocol: tcp
     source_port: 80
